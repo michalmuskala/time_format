@@ -22,6 +22,7 @@ defmodule Strftime.FormatTest do
       format = [:year4, "-", :month, "-", :zeroed_day]
       {head, body} = Format.compile(format)
       assert Macro.to_string(head) == "%{day: day, month: month, year: year}"
+
       assert Macro.to_string(body) == """
              <<Strftime.Format.zeroed_int4(year)::binary()-size(4), \"-\", \
              Strftime.Format.zeroed_int(month)::binary()-size(2), \"-\", \

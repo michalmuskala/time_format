@@ -18,7 +18,6 @@ defmodule Strftime.MixProject do
   end
 
   defp deps do
-    [
-    ]
+    []
   end
 end

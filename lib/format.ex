@@ -50,7 +50,7 @@ defmodule Strftime.Format do
       # preferred: ?c,
       zeroed_day: quote(do: Format.zeroed_int2(day) :: binary() - size(2)),
       # us_date: ?D,
-      spaced_day: quote(do: Format.spaced_int2(day)::binary()-size(2)),
+      spaced_day: quote(do: Format.spaced_int2(day) :: binary() - size(2)),
       # iso_date: ?F,
       fractional: quote(do: Format.microsecond(microsecond)),
       iso_year2: quote(do: Format.iso_year2(year, month, day) :: binary() - size(2)),
@@ -262,7 +262,6 @@ defmodule Strftime.Format do
 
   @doc false
   def microsecond({value, precision}) do
-
   end
 
   @doc false
