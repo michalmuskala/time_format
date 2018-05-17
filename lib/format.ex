@@ -43,24 +43,23 @@ defmodule Strftime.Format do
     alias Strftime.Format, as: F
 
     @expressions [
-      abbr_wday: quote(do: F.abbr_wday(year, month, day) :: 3 - bytes),
+      abbr_wday: quote(do: F.abbr_wday(year, month, day) :: 3 - bytes()),
       full_wday: quote(do: F.full_wday(year, month, day)),
-      abbr_month: quote(do: F.abbr_month(month) :: 3 - bytes),
-      full_month: quote(do: F.full_month(month) :: 3 - bytes),
+      abbr_month: quote(do: F.abbr_month(month) :: 3 - bytes()),
+      full_month: quote(do: F.full_month(month) :: 3 - bytes()),
       # preferred: ?c,
-      zeroed_day: quote(do: F.zeroed_int2(day) :: 2 - bytes),
-      spaced_day: quote(do: F.spaced_int2(day) :: 2 - bytes),
-      # fractional: quote(do: F.microsecond(microsecond)),
-      iso_year2: quote(do: F.iso_year2(year, month, day) :: 2 - bytes),
-      iso_year4: quote(do: F.iso_year4(year, month, day) :: 2 - bytes),
-      hour24: quote(do: F.zeroed_int2(hour) :: 2 - bytes),
-      hour12: quote(do: F.zeroed_int2(rem(hour, 12)) :: 2 - bytes),
+      zeroed_day: quote(do: F.zeroed_int2(day) :: 2 - bytes()),
+      spaced_day: quote(do: F.spaced_int2(day) :: 2 - bytes()),
+      fractional: quote(do: F.zeroed_int6(microsecond) :: size(precision) - bytes()),
+      iso_year2: quote(do: F.iso_year2(year, month, day) :: 2 - bytes()),
+      iso_year4: quote(do: F.iso_year4(year, month, day) :: 2 - bytes()),
+      hour24: quote(do: F.zeroed_int2(hour) :: 2 - bytes()),
+      hour12: quote(do: F.zeroed_int2(rem(hour, 12)) :: 2 - bytes()),
       # year_day: ?j,
-      month: quote(do: F.zeroed_int2(month) :: 2 - bytes),
-      minute: quote(do: F.zeroed_int2(minute) :: 2 - bytes),
-      am_pm: quote(do: F.am_pm(hour, minute) :: 2 - bytes),
-      second: quote(do: F.zeroed_int2(second) :: 2 - bytes),
-      # iso_time: ?T,
+      month: quote(do: F.zeroed_int2(month) :: 2 - bytes()),
+      minute: quote(do: F.zeroed_int2(minute) :: 2 - bytes()),
+      am_pm: quote(do: F.am_pm(hour, minute) :: 2 - bytes()),
+      second: quote(do: F.zeroed_int2(second) :: 2 - bytes()),
       # iso_weekday: ?u,
       # usweek_week: ?U,
       # week: ?V,
@@ -68,16 +67,17 @@ defmodule Strftime.Format do
       # isoweek_week: ?W,
       # local_date: ?x,
       # local_time: ?X,
-      year2: quote(do: F.zeroed_int2(rem(year, 100)) :: 2 - bytes),
-      year4: quote(do: F.zeroed_int4(year) :: 4 - bytes),
-      offset: quote(do: F.offset(utc_offset, std_offset) :: 5 - bytes),
-      offset_ext: quote(do: F.offset_ext(utc_offset, std_offset) :: 6 - bytes)
+      year2: quote(do: F.zeroed_int2(rem(year, 100)) :: 2 - bytes()),
+      year4: quote(do: F.zeroed_int4(year) :: 4 - bytes()),
+      offset: quote(do: F.offset(utc_offset, std_offset) :: 5 - bytes()),
+      offset_ext: quote(do: F.offset_ext(utc_offset, std_offset) :: 6 - bytes())
       # timezone: ?Z,
     ]
 
     @complex [
       us_date: [:month, "/", :zeroed_day, "/", :year2],
       iso_date: [:year4, "-", :month, "-", :zeroed_day],
+      iso_time: [:hour24, ":", :minute, ":", :second],
       clock12: [:hour12, ":", :minute, ":", :second, " ", :am_pm],
       clock24: [:hour24, ":", :minute]
     ]
@@ -99,6 +99,10 @@ defmodule Strftime.Format do
     def collect_bindings(quoted) do
       quoted
       |> Macro.prewalk([calendar: Calendar.ISO], fn
+        {micro, _, ctx} = var, acc when is_atom(ctx) and micro in [:microsecond, :precision] ->
+          value = quote(do: {microsecond, precision})
+          {var, [{:microsecond, value} | acc]}
+
         {name, _, ctx} = var, acc when is_atom(name) and is_atom(ctx) ->
           {var, [{name, var} | acc]}
 
@@ -111,8 +115,14 @@ defmodule Strftime.Format do
 
     def expand_to_simple(name) do
       Enum.map(expand(name), fn
-        {:::, _, [expr, _]} -> expr
-        expr -> expr
+        {:::, _, [expr, {:-, _, [{:size, _, [size]}, _]}]} ->
+          quote(do: binary_part(unquote(expr), 0, unquote(size)))
+
+        {:::, _, [expr, _]} ->
+          expr
+
+        expr ->
+          expr
       end)
     end
   end
@@ -176,17 +186,25 @@ defmodule Strftime.Format do
   ## Formatting helpers
 
   @doc false
-  def zeroed_int2(int) when int < 10, do: <<?0, Integer.to_string(int)::binary-size(1)>>
+  def zeroed_int2(int) when int < 10, do: <<?0, Integer.to_string(int)::1-bytes>>
   def zeroed_int2(int), do: Integer.to_string(int)
 
   @doc false
-  def zeroed_int4(int) when int < 10, do: <<?0, ?0, ?0, Integer.to_string(int)::binary-size(1)>>
-  def zeroed_int4(int) when int < 100, do: <<?0, ?0, Integer.to_string(int)::binary-size(2)>>
-  def zeroed_int4(int) when int < 1000, do: <<?0, Integer.to_string(int)::binary-size(3)>>
+  def zeroed_int4(int) when int < 10, do: <<?0, ?0, ?0, Integer.to_string(int)::1-bytes>>
+  def zeroed_int4(int) when int < 100, do: <<?0, ?0, Integer.to_string(int)::2-bytes>>
+  def zeroed_int4(int) when int < 1000, do: <<?0, Integer.to_string(int)::3-bytes>>
   def zeroed_int4(int), do: Integer.to_string(int)
 
   @doc false
-  def spaced_int2(int) when int < 10, do: <<?\s, Integer.to_string(int)::binary-size(1)>>
+  def zeroed_int6(int) when int < 10, do: <<?0, ?0, ?0, ?0, ?0, Integer.to_string(int)::1-bytes>>
+  def zeroed_int6(int) when int < 100, do: <<?0, ?0, ?0, ?0, Integer.to_string(int)::2-bytes>>
+  def zeroed_int6(int) when int < 1000, do: <<?0, ?0, ?0, Integer.to_string(int)::3-bytes>>
+  def zeroed_int6(int) when int < 10000, do: <<?0, ?0, Integer.to_string(int)::4-bytes>>
+  def zeroed_int6(int) when int < 100_000, do: <<?0, Integer.to_string(int)::5-bytes>>
+  def zeroed_int6(int), do: Integer.to_string(int)
+
+  @doc false
+  def spaced_int2(int) when int < 10, do: <<?\s, Integer.to_string(int)::1-bytes>>
   def spaced_int2(int), do: Integer.to_string(int)
 
   @doc false
