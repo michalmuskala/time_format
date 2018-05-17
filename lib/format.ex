@@ -40,30 +40,26 @@ defmodule Strftime.Format do
   defmodule Utils do
     @moduledoc false
 
-    alias Strftime.Format
+    alias Strftime.Format, as: F
 
     @expressions [
-      abbr_wday: quote(do: Format.abbr_wday(year, month, day) :: binary() - size(3)),
-      full_wday: quote(do: Format.full_wday(year, month, day)),
-      abbr_month: quote(do: Format.abbr_month(month) :: binary() - size(3)),
-      full_month: quote(do: Format.full_month(month) :: binary() - size(3)),
+      abbr_wday: quote(do: F.abbr_wday(year, month, day) :: 3 - bytes),
+      full_wday: quote(do: F.full_wday(year, month, day)),
+      abbr_month: quote(do: F.abbr_month(month) :: 3 - bytes),
+      full_month: quote(do: F.full_month(month) :: 3 - bytes),
       # preferred: ?c,
-      zeroed_day: quote(do: Format.zeroed_int2(day) :: binary() - size(2)),
-      us_date: quote(do: Format.us_date(year, month, day) :: binary() - size(8)),
-      spaced_day: quote(do: Format.spaced_int2(day) :: binary() - size(2)),
-      iso_date: quote(do: Format.iso_date(year, month, day) :: binary() - size(10)),
-      fractional: quote(do: Format.microsecond(microsecond)),
-      iso_year2: quote(do: Format.iso_year2(year, month, day) :: binary() - size(2)),
-      iso_year4: quote(do: Format.iso_year4(year, month, day) :: binary() - size(2)),
-      hour24: quote(do: Format.zeroed_int2(hour) :: binary() - size(2)),
-      hour12: quote(do: Format.zeroed_int2(rem(hour, 12)) :: binary() - size(2)),
+      zeroed_day: quote(do: F.zeroed_int2(day) :: 2 - bytes),
+      spaced_day: quote(do: F.spaced_int2(day) :: 2 - bytes),
+      # fractional: quote(do: F.microsecond(microsecond)),
+      iso_year2: quote(do: F.iso_year2(year, month, day) :: 2 - bytes),
+      iso_year4: quote(do: F.iso_year4(year, month, day) :: 2 - bytes),
+      hour24: quote(do: F.zeroed_int2(hour) :: 2 - bytes),
+      hour12: quote(do: F.zeroed_int2(rem(hour, 12)) :: 2 - bytes),
       # year_day: ?j,
-      month: quote(do: Format.zeroed_int2(month) :: binary() - size(2)),
-      minute: quote(do: Format.zeroed_int2(minute) :: binary() - size(2)),
-      am_pm: quote(do: Format.am_pm(hour, minute) :: binary() - size(2)),
-      clock12: quote(do: Format.clock_12(hour, minute, second) :: binary() - size(11)),
-      clock24: quote(do: Format.clock_24(hour, minute) :: binary() - size(5)),
-      second: quote(do: Format.zeroed_int2(second) :: binary() - size(2)),
+      month: quote(do: F.zeroed_int2(month) :: 2 - bytes),
+      minute: quote(do: F.zeroed_int2(minute) :: 2 - bytes),
+      am_pm: quote(do: F.am_pm(hour, minute) :: 2 - bytes),
+      second: quote(do: F.zeroed_int2(second) :: 2 - bytes),
       # iso_time: ?T,
       # iso_weekday: ?u,
       # usweek_week: ?U,
@@ -72,19 +68,32 @@ defmodule Strftime.Format do
       # isoweek_week: ?W,
       # local_date: ?x,
       # local_time: ?X,
-      year2: quote(do: Format.zeroed_int2(rem(year, 100)) :: binary() - size(2)),
-      year4: quote(do: Format.zeroed_int4(year) :: binary() - size(4)),
-      offset: quote(do: Format.offset(utc_offset, std_offset) :: binary() - size(5)),
-      offset_ext: quote(do: Format.offset_ext(utc_offset, std_offset) :: binary() - size(6))
+      year2: quote(do: F.zeroed_int2(rem(year, 100)) :: 2 - bytes),
+      year4: quote(do: F.zeroed_int4(year) :: 4 - bytes),
+      offset: quote(do: F.offset(utc_offset, std_offset) :: 5 - bytes),
+      offset_ext: quote(do: F.offset_ext(utc_offset, std_offset) :: 6 - bytes)
       # timezone: ?Z,
+    ]
+
+    @complex [
+      us_date: [:month, "/", :zeroed_day, "/", :year2],
+      iso_date: [:year4, "-", :month, "-", :zeroed_day],
+      clock12: [:hour12, ":", :minute, ":", :second, " ", :am_pm],
+      clock24: [:hour24, ":", :minute]
     ]
 
     def names, do: unquote(Keyword.keys(@expressions))
 
-    def expand(string) when is_binary(string), do: string
+    def expand(string) when is_binary(string), do: [string]
 
     for {name, expression} <- @expressions do
-      def expand(unquote(name)), do: unquote(Macro.escape(expression))
+      def expand(unquote(name)), do: [unquote(Macro.escape(expression))]
+    end
+
+    for {name, expression} <- @complex do
+      def expand(unquote(name)) do
+        Enum.flat_map(unquote(expression), &expand/1)
+      end
     end
 
     def collect_bindings(quoted) do
@@ -101,10 +110,10 @@ defmodule Strftime.Format do
     end
 
     def expand_to_simple(name) do
-      case expand(name) do
+      Enum.map(expand(name), fn
         {:::, _, [expr, _]} -> expr
         expr -> expr
-      end
+      end)
     end
   end
 
@@ -136,7 +145,7 @@ defmodule Strftime.Format do
   defp do_parse(<<>>, acc), do: [acc]
 
   def compile(segments) do
-    expanded = Enum.map(segments, &Utils.expand/1)
+    expanded = Enum.flat_map(segments, &Utils.expand/1)
     bindings = Utils.collect_bindings(expanded)
     head = quote(do: %{unquote_splicing(bindings)})
     body = quote(do: <<unquote_splicing(expanded)>>)
@@ -160,7 +169,7 @@ defmodule Strftime.Format do
     bindings = Utils.collect_bindings(expanded)
 
     defp interpret_segment([unquote(name) | rest], %{unquote_splicing(bindings)} = data) do
-      [unquote(expanded) | interpret_segment(rest, data)]
+      [unquote_splicing(expanded) | interpret_segment(rest, data)]
     end
   end
 
@@ -261,32 +270,8 @@ defmodule Strftime.Format do
   end
 
   @doc false
-  def microsecond({value, precision}) do
-  end
-
-  @doc false
   def am_pm(hour, minute) do
     if hour < 12 or (hour == 12 and minute == 0), do: "AM", else: "PM"
-  end
-
-  @doc false
-  def us_date(year, month, day) do
-    <<zeroed_int2(month)::binary-size(2), "/", zeroed_int2(day)::binary-size(2), "/", zeroed_int2(rem(year, 100))::binary-size(2)>>
-  end
-
-  @doc false
-  def iso_date(year, month, day) do
-    <<zeroed_int4(year)::binary-size(4), "-", zeroed_int2(month)::binary-size(2), "-", zeroed_int2(day)::binary-size(2)>>
-  end
-
-  @doc false
-  def clock_12(hour, minute, second) do
-    <<zeroed_int2(rem(hour, 12))::binary-size(2), ":", zeroed_int2(minute)::binary-size(2), ":", zeroed_int2(second)::binary-size(2), " ", am_pm(hour, minute)::binary-size(2)>>
-  end
-
-  @doc false
-  def clock_24(hour, minute) do
-    <<zeroed_int2(hour)::binary-size(2), ":", zeroed_int2(minute)::binary-size(2)>>
   end
 
   # %a	Abbreviated weekday name *	Thu
