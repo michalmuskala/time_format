@@ -49,9 +49,9 @@ defmodule Strftime.Format do
       full_month: quote(do: Format.full_month(month) :: binary() - size(3)),
       # preferred: ?c,
       zeroed_day: quote(do: Format.zeroed_int2(day) :: binary() - size(2)),
-      # us_date: ?D,
+      us_date: quote(do: Format.us_date(year, month, day) :: binary() - size(8)),
       spaced_day: quote(do: Format.spaced_int2(day) :: binary() - size(2)),
-      # iso_date: ?F,
+      iso_date: quote(do: Format.iso_date(year, month, day) :: binary() - size(10)),
       fractional: quote(do: Format.microsecond(microsecond)),
       iso_year2: quote(do: Format.iso_year2(year, month, day) :: binary() - size(2)),
       iso_year4: quote(do: Format.iso_year4(year, month, day) :: binary() - size(2)),
@@ -61,8 +61,8 @@ defmodule Strftime.Format do
       month: quote(do: Format.zeroed_int2(month) :: binary() - size(2)),
       minute: quote(do: Format.zeroed_int2(minute) :: binary() - size(2)),
       am_pm: quote(do: Format.am_pm(hour, minute) :: binary() - size(2)),
-      # clock12: ?r,
-      # clock24: ?R,
+      clock12: quote(do: Format.clock_12(hour, minute, second) :: binary() - size(11)),
+      clock24: quote(do: Format.clock_24(hour, minute) :: binary() - size(5)),
       second: quote(do: Format.zeroed_int2(second) :: binary() - size(2)),
       # iso_time: ?T,
       # iso_weekday: ?u,
@@ -267,6 +267,26 @@ defmodule Strftime.Format do
   @doc false
   def am_pm(hour, minute) do
     if hour < 12 or (hour == 12 and minute == 0), do: "AM", else: "PM"
+  end
+
+  @doc false
+  def us_date(year, month, day) do
+    <<zeroed_int2(month)::binary-size(2), "/", zeroed_int2(day)::binary-size(2), "/", zeroed_int2(rem(year, 100))::binary-size(2)>>
+  end
+
+  @doc false
+  def iso_date(year, month, day) do
+    <<zeroed_int4(year)::binary-size(4), "-", zeroed_int2(month)::binary-size(2), "-", zeroed_int2(day)::binary-size(2)>>
+  end
+
+  @doc false
+  def clock_12(hour, minute, second) do
+    <<zeroed_int2(rem(hour, 12))::binary-size(2), ":", zeroed_int2(minute)::binary-size(2), ":", zeroed_int2(second)::binary-size(2), " ", am_pm(hour, minute)::binary-size(2)>>
+  end
+
+  @doc false
+  def clock_24(hour, minute) do
+    <<zeroed_int2(hour)::binary-size(2), ":", zeroed_int2(minute)::binary-size(2)>>
   end
 
   # %a	Abbreviated weekday name *	Thu
