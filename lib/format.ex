@@ -1,24 +1,28 @@
 defmodule Strftime.Format do
   @formats [
-    abbr_wday: ?a,
+    awday: ?a,
     full_wday: ?A,
-    abbr_month: ?b,
+    amonth: ?b,
     full_month: ?B,
     preferred: ?c,
     year2: ?C,
-    zeroed_day: ?d,
+    zday: ?d,
+    sday: ?e,
     us_date: ?D,
-    spaced_day: ?e,
     iso_date: ?F,
+    vms_date: ?v,
     fractional: ?f,
     iso_year2: ?g,
     iso_year4: ?G,
     hour24: ?H,
+    spaced_hour24: ?k,
     hour12: ?I,
+    spaced_hour12: ?l,
     year_day: ?j,
-    month: ?m,
+    zmonth: ?m,
     minute: ?M,
     am_pm: ?p,
+    am_pm_lower: ?P,
     clock12: ?r,
     clock24: ?R,
     second: ?S,
@@ -34,7 +38,8 @@ defmodule Strftime.Format do
     year4: ?Y,
     offset: ?z,
     offset_ext: ":z",
-    timezone: ?Z
+    timezone: ?Z,
+    full: ?+
   ]
 
   defmodule Utils do
@@ -43,43 +48,48 @@ defmodule Strftime.Format do
     alias Strftime.Format, as: F
 
     @expressions [
-      abbr_wday: quote(do: F.abbr_wday(year, month, day) :: 3 - bytes()),
+      awday: quote(do: F.awday(year, month, day) :: 3 - bytes()),
       full_wday: quote(do: F.full_wday(year, month, day)),
-      abbr_month: quote(do: F.abbr_month(month) :: 3 - bytes()),
+      amonth: quote(do: F.amonth(month) :: 3 - bytes()),
       full_month: quote(do: F.full_month(month) :: 3 - bytes()),
-      # preferred: ?c,
-      zeroed_day: quote(do: F.zeroed_int2(day) :: 2 - bytes()),
-      spaced_day: quote(do: F.spaced_int2(day) :: 2 - bytes()),
+      zday: quote(do: F.zeroed_int2(day) :: 2 - bytes()),
+      sday: quote(do: F.spaced_int2(day) :: 2 - bytes()),
       fractional: quote(do: F.zeroed_int6(microsecond) :: size(precision) - bytes()),
       iso_year2: quote(do: F.iso_year2(year, month, day) :: 2 - bytes()),
       iso_year4: quote(do: F.iso_year4(year, month, day) :: 2 - bytes()),
       hour24: quote(do: F.zeroed_int2(hour) :: 2 - bytes()),
+      spaced_hour24: quote(do: F.spaced_int2(hour) :: 2 - bytes()),
       hour12: quote(do: F.zeroed_int2(rem(hour, 12)) :: 2 - bytes()),
+      spaced_hour12: quote(do: F.spaced_int2(rem(hour, 12)) :: 2 - bytes()),
       # year_day: ?j,
-      month: quote(do: F.zeroed_int2(month) :: 2 - bytes()),
+      zmonth: quote(do: F.zeroed_int2(month) :: 2 - bytes()),
       minute: quote(do: F.zeroed_int2(minute) :: 2 - bytes()),
       am_pm: quote(do: F.am_pm(hour, minute) :: 2 - bytes()),
+      am_pm_lower: quote(do: F.am_pm_lower(hour, minute) :: 2 - bytes()),
       second: quote(do: F.zeroed_int2(second) :: 2 - bytes()),
       # iso_weekday: ?u,
       # usweek_week: ?U,
       # week: ?V,
       # us_weekday: ?w,
       # isoweek_week: ?W,
-      # local_date: ?x,
-      # local_time: ?X,
       year2: quote(do: F.zeroed_int2(rem(year, 100)) :: 2 - bytes()),
       year4: quote(do: F.zeroed_int4(year) :: 4 - bytes()),
       offset: quote(do: F.offset(utc_offset, std_offset) :: 5 - bytes()),
-      offset_ext: quote(do: F.offset_ext(utc_offset, std_offset) :: 6 - bytes())
+      offset_ext: quote(do: F.offset_ext(utc_offset, std_offset) :: 6 - bytes()),
       # timezone: ?Z,
     ]
 
     @complex [
-      us_date: [:month, "/", :zeroed_day, "/", :year2],
-      iso_date: [:year4, "-", :month, "-", :zeroed_day],
+      us_date: [:zmonth, "/", :zday, "/", :year2],
+      iso_date: [:year4, "-", :zmonth, "-", :zday],
       iso_time: [:hour24, ":", :minute, ":", :second],
       clock12: [:hour12, ":", :minute, ":", :second, " ", :am_pm],
-      clock24: [:hour24, ":", :minute]
+      clock24: [:hour24, ":", :minute],
+      preferred: [:awday, " ", :amonth, " ", :sday, " ", :iso_time, " ", :year4],
+      vms_date: [:sday, "-", :amonth, "-", :year4],
+      local_date: [:zmonth, "/", :zday, "/", :year2],
+      local_time: [:hour24, ":", :minute, ":", :second],
+      full: [:awday, " ", :amonth, " ", :sday, " ", :iso_time, " ", :timezone, " ", :year4]
     ]
 
     def names, do: unquote(Keyword.keys(@expressions))
@@ -240,7 +250,7 @@ defmodule Strftime.Format do
   end
 
   @doc false
-  def abbr_wday(year, month, day) do
+  def awday(year, month, day) do
     wday_to_abbr(wday(year, month, day))
   end
 
@@ -278,7 +288,7 @@ defmodule Strftime.Format do
 
   @doc false
   for {month, idx} <- Enum.with_index(~w[Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec]) do
-    def abbr_month(unquote(idx + 1)), do: unquote(month)
+    def amonth(unquote(idx + 1)), do: unquote(month)
   end
 
   @doc false
@@ -290,6 +300,11 @@ defmodule Strftime.Format do
   @doc false
   def am_pm(hour, minute) do
     if hour < 12 or (hour == 12 and minute == 0), do: "AM", else: "PM"
+  end
+
+  @doc false
+  def am_pm_lower(hour, minute) do
+    if hour < 12 or (hour == 12 and minute == 0), do: "am", else: "pm"
   end
 
   # %a	Abbreviated weekday name *	Thu

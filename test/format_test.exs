@@ -9,7 +9,7 @@ defmodule Strftime.FormatTest do
     end
 
     test "iso date" do
-      assert Format.parse("%Y-%m-%d") == [:year4, "-", :month, "-", :zeroed_day]
+      assert Format.parse("%Y-%m-%d") == [:year4, "-", :zmonth, "-", :zday]
     end
   end
 
@@ -20,7 +20,7 @@ defmodule Strftime.FormatTest do
     end
 
     test "iso date" do
-      format = [:year4, "-", :month, "-", :zeroed_day]
+      format = [:year4, "-", :zmonth, "-", :zday]
       {head, body} = Format.compile(format)
 
       assert Macro.to_string(head) ==
