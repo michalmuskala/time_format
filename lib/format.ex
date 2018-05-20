@@ -15,6 +15,7 @@ defmodule Strftime.Format do
     iso_year2: ?g,
     iso_year4: ?G,
     hour24: ?H,
+    amonth: ?h,
     spaced_hour24: ?k,
     hour12: ?I,
     spaced_hour12: ?l,
@@ -61,7 +62,7 @@ defmodule Strftime.Format do
       spaced_hour24: quote(do: F.spaced_int2(hour) :: 2 - bytes()),
       hour12: quote(do: F.zeroed_int2(rem(hour, 12)) :: 2 - bytes()),
       spaced_hour12: quote(do: F.spaced_int2(rem(hour, 12)) :: 2 - bytes()),
-      # year_day: ?j,
+      year_day: quote(do: F.year_day(year, month, day) :: 2 - bytes()),
       zmonth: quote(do: F.zeroed_int2(month) :: 2 - bytes()),
       minute: quote(do: F.zeroed_int2(minute) :: 2 - bytes()),
       am_pm: quote(do: F.am_pm(hour, minute) :: 2 - bytes()),
@@ -76,7 +77,7 @@ defmodule Strftime.Format do
       year4: quote(do: F.zeroed_int4(year) :: 4 - bytes()),
       offset: quote(do: F.offset(utc_offset, std_offset) :: 5 - bytes()),
       offset_ext: quote(do: F.offset_ext(utc_offset, std_offset) :: 6 - bytes()),
-      # timezone: ?Z,
+      timezone: ?Z
     ]
 
     @complex [
@@ -92,7 +93,7 @@ defmodule Strftime.Format do
       full: [:awday, " ", :amonth, " ", :sday, " ", :iso_time, " ", :timezone, " ", :year4]
     ]
 
-    def names, do: unquote(Keyword.keys(@expressions))
+    def names, do: unquote(Keyword.keys(@expressions) ++ Keyword.keys(@complex))
 
     def expand(string) when is_binary(string), do: [string]
 
@@ -200,6 +201,11 @@ defmodule Strftime.Format do
   def zeroed_int2(int), do: Integer.to_string(int)
 
   @doc false
+  def zeroed_int3(int) when int < 10, do: <<?0, ?0, Integer.to_string(int)::1-bytes>>
+  def zeroed_int3(int) when int < 100, do: <<?0, Integer.to_string(int)::1-bytes>>
+  def zeroed_int3(int), do: Integer.to_string(int)
+
+  @doc false
   def zeroed_int4(int) when int < 10, do: <<?0, ?0, ?0, Integer.to_string(int)::1-bytes>>
   def zeroed_int4(int) when int < 100, do: <<?0, ?0, Integer.to_string(int)::2-bytes>>
   def zeroed_int4(int) when int < 1000, do: <<?0, Integer.to_string(int)::3-bytes>>
@@ -270,6 +276,15 @@ defmodule Strftime.Format do
   def iso_year4(year, month, day) do
     {year, _} = :calendar.iso_week_number({year, month, day})
     zeroed_int4(year)
+  end
+
+  @doc false
+  def year_day(year, month, day) do
+    days =
+      1 + :calendar.date_to_gregorian_days({year, month, day}) -
+        :calendar.date_to_gregorian_days({year, 1, 1})
+
+    zeroed_int3(days)
   end
 
   @compile {:inline, wday: 3, wday_to_abbr: 1, wday_to_full: 1}
