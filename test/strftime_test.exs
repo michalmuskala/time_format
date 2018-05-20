@@ -7,6 +7,7 @@ defmodule StrftimeTest do
     @d ~D[2018-06-01]
     @n ~N[2018-06-01 15:45:00]
     @t ~T[15:45:00]
+    @dt DateTime.from_naive(@n, "Etc/UTC") |> elem(1)
 
     test "%a is short weekday", do: assert(interpret("%a", @d) == "Fri")
     test "%A is full weekday", do: assert(interpret("%A", @d) == "Friday")
@@ -48,6 +49,14 @@ defmodule StrftimeTest do
       assert(interpret("%j", @d) == "152")
       assert(interpret("%j", ~D[2018-01-01]) == "001")
       assert(interpret("%j", ~D[2018-12-31]) == "365")
+    end
+
+    test "%Z is the time zone or abbreviation" do
+      assert(interpret("%Z", @dt) == "UTC")
+    end
+
+    test "%+ is a full date time format, including time zone" do
+      assert(interpret("%+", @dt) == "Fri Jun  1 15:45:00 UTC 2018")
     end
   end
 end

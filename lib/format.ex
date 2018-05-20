@@ -62,7 +62,7 @@ defmodule Strftime.Format do
       spaced_hour24: quote(do: F.spaced_int2(hour) :: 2 - bytes()),
       hour12: quote(do: F.zeroed_int2(rem(hour, 12)) :: 2 - bytes()),
       spaced_hour12: quote(do: F.spaced_int2(rem(hour, 12)) :: 2 - bytes()),
-      year_day: quote(do: F.year_day(year, month, day) :: 2 - bytes()),
+      year_day: quote(do: F.year_day(year, month, day) :: 3 - bytes()),
       zmonth: quote(do: F.zeroed_int2(month) :: 2 - bytes()),
       minute: quote(do: F.zeroed_int2(minute) :: 2 - bytes()),
       am_pm: quote(do: F.am_pm(hour, minute) :: 2 - bytes()),
@@ -77,7 +77,7 @@ defmodule Strftime.Format do
       year4: quote(do: F.zeroed_int4(year) :: 4 - bytes()),
       offset: quote(do: F.offset(utc_offset, std_offset) :: 5 - bytes()),
       offset_ext: quote(do: F.offset_ext(utc_offset, std_offset) :: 6 - bytes()),
-      timezone: ?Z
+      timezone: quote(do: F.timezone(zone_abbr) :: 3 - bytes())
     ]
 
     @complex [
@@ -286,6 +286,9 @@ defmodule Strftime.Format do
 
     zeroed_int3(days)
   end
+
+  @doc false
+  def timezone(zone_abbr), do: zone_abbr
 
   @compile {:inline, wday: 3, wday_to_abbr: 1, wday_to_full: 1}
 
