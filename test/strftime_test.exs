@@ -51,6 +51,68 @@ defmodule StrftimeTest do
       assert(interpret("%j", ~D[2018-12-31]) == "365")
     end
 
+    test "%m is month as number", do: assert(interpret("%m", @d) == "06")
+    test "%M is minute in range 00-59", do: assert(interpret("%M", @t) == "45")
+    test "%n is a newline character", do: assert(interpret("%n", @d) == "\n")
+    test "%p is AM or PM", do: assert(interpret("%p", @t) == "PM")
+    test "%r is 12-hour clock time", do: assert(interpret("%r", @t) == "03:45:00 PM")
+    test "%R is 24-hour HH:MM time", do: assert(interpret("%R", @t) == "15:45")
+
+    test "%S is second in range 00-61" do
+      assert(interpret("%S", @t) == "00")
+      assert(interpret("%S", ~T[23:59:60]) == "60")
+    end
+
+    test "%t is a tab character", do: assert(interpret("%t", @t), "\t")
+
+    test "%T is ISO 8601 time format, equivalent to %H:%M:%S" do
+      assert(interpret("%T", @t) == interpret("%H:%M:%S", @t))
+      assert(interpret("%T", @t) == "15:45:00")
+    end
+
+    test "%u is ISO 8601 weekday in range 1-7", do: assert(interpret("%u", @d) == "5")
+
+    test "%U is week number where first Sunday starts week one" do
+      assert(interpret("%U", @d) == "21")
+      assert(interpret("%U", ~D[2015-12-31]) == "52")
+      assert(interpret("%U", ~D[2017-01-01]) == "01")
+      assert(interpret("%U", ~D[2018-01-01]) == "00")
+      assert(interpret("%U", ~D[2018-12-31]) == "52")
+    end
+
+    test "%V is ISO 8601 week number" do
+      assert(interpret("%V", @d) == "22")
+      assert(interpret("%V", ~D[2015-12-31]) == "53")
+      assert(interpret("%V", ~D[2017-01-01]) == "52")
+      assert(interpret("%V", ~D[2018-01-01]) == "01")
+      assert(interpret("%V", ~D[2018-12-31]) == "01")
+    end
+
+    test "%w is weekday in range 0-6 starting Sunday", do: assert(interpret("%w", @d) == "5")
+
+    test "%W is week number where first Monday starts week one" do
+      assert(interpret("%W", @d) == "22")
+      assert(interpret("%W", ~D[2015-12-31]) == "52")
+      assert(interpret("%W", ~D[2017-01-01]) == "00")
+      assert(interpret("%W", ~D[2018-01-01]) == "01")
+      assert(interpret("%W", ~D[2018-12-31]) == "53")
+    end
+
+    test "%x is date equivalent to %m/%d/%y" do
+      assert(interpret("%x", @d) == interpret("%m/%d/%y", @d))
+      assert(interpret("%x", @d) == "06/01/18")
+    end
+
+    test "%X is time equivalent to %H:%M:%S" do
+      assert(interpret("%X", @t) == interpret("%H:%M:%S", @t))
+      assert(interpret("%X", @t) == "15:45:00")
+    end
+
+    test "%y is last two digits of year", do: assert(interpret("%y", @d) == "18")
+    test "%Y is full year", do: assert(interpret("%Y", @d) == "2018")
+
+    test "%z is the ISO 8601 offset from UTC", do: assert(interpret("%z", @dt) == "+0000")
+
     test "%Z is the time zone or abbreviation" do
       assert(interpret("%Z", @dt) == "UTC")
     end
