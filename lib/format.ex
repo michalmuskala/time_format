@@ -320,11 +320,12 @@ defmodule Strftime.Format do
   @compile {:inline, wday: 3, wday_to_abbr: 1, wday_to_full: 1}
 
   defp wday(year, month, day) do
-    Integer.mod(Calendar.ISO.date_to_iso_days(year, month, day) + 5, 7)
+    Integer.mod(:calendar.date_to_gregorian_days(year, month, day) + 5, 7)
   end
 
   defp year_day_number(year, month, day) do
-    Calendar.ISO.date_to_iso_days(year, month, day) - Calendar.ISO.date_to_iso_days(year, 1, 0)
+    1 + :calendar.date_to_gregorian_days(year, month, day) -
+      :calendar.date_to_gregorian_days(year, 1, 1)
   end
 
   defp week_number(year, month, day, day_of_week_one_fun) do
