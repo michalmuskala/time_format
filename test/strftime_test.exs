@@ -51,6 +51,9 @@ defmodule StrftimeTest do
       assert(interpret("%j", ~D[2018-12-31]) == "365")
     end
 
+    test "%k is hour in range 0-24, space padded", do: assert(interpret("%k", @t) == "15")
+    test "%l is hour in range 1-12, space padded", do: assert(interpret("%l", @t) == " 3")
+
     test "%m is month as number", do: assert(interpret("%m", @d) == "06")
     test "%M is minute in range 00-59", do: assert(interpret("%M", @t) == "45")
     test "%n is a newline character", do: assert(interpret("%n", @d) == "\n")
@@ -78,6 +81,11 @@ defmodule StrftimeTest do
       assert(interpret("%U", ~D[2017-01-01]) == "01")
       assert(interpret("%U", ~D[2018-01-01]) == "00")
       assert(interpret("%U", ~D[2018-12-31]) == "52")
+    end
+
+    test "%v is equivalent to %e-%b-%Y" do
+      assert(interpret("%v", @d) == interpret("%v", @d))
+      assert(interpret("%v", @d) == " 1-Jun-2018")
     end
 
     test "%V is ISO 8601 week number" do
@@ -120,5 +128,7 @@ defmodule StrftimeTest do
     test "%+ is a full date time format, including time zone" do
       assert(interpret("%+", @dt) == "Fri Jun  1 15:45:00 UTC 2018")
     end
+
+    test "%% is a % character", do: assert(interpret("%%", @d) == "%")
   end
 end
