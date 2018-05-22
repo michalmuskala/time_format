@@ -15,6 +15,7 @@ defmodule Strftime.Format do
     iso_year2: ?g,
     iso_year4: ?G,
     hour24: ?H,
+    amonth: ?h,
     spaced_hour24: ?k,
     hour12: ?I,
     spaced_hour12: ?l,
@@ -28,10 +29,10 @@ defmodule Strftime.Format do
     second: ?S,
     iso_time: ?T,
     iso_weekday: ?u,
-    usweek_week: ?U,
-    week: ?V,
-    us_weekday: ?w,
-    isoweek_week: ?W,
+    week_sun: ?U,
+    iso_week: ?V,
+    weekday_sun: ?w,
+    week_mon: ?W,
     local_date: ?x,
     local_time: ?X,
     year2: ?y,
@@ -61,22 +62,22 @@ defmodule Strftime.Format do
       spaced_hour24: quote(do: F.spaced_int2(hour) :: 2 - bytes()),
       hour12: quote(do: F.zeroed_int2(rem(hour, 12)) :: 2 - bytes()),
       spaced_hour12: quote(do: F.spaced_int2(rem(hour, 12)) :: 2 - bytes()),
-      # year_day: ?j,
+      year_day: quote(do: F.year_day(year, month, day) :: 3 - bytes()),
       zmonth: quote(do: F.zeroed_int2(month) :: 2 - bytes()),
       minute: quote(do: F.zeroed_int2(minute) :: 2 - bytes()),
       am_pm: quote(do: F.am_pm(hour, minute) :: 2 - bytes()),
       am_pm_lower: quote(do: F.am_pm_lower(hour, minute) :: 2 - bytes()),
       second: quote(do: F.zeroed_int2(second) :: 2 - bytes()),
-      # iso_weekday: ?u,
-      # usweek_week: ?U,
-      # week: ?V,
-      # us_weekday: ?w,
-      # isoweek_week: ?W,
+      iso_weekday: quote(do: F.iso_wday(year, month, day) :: 1 - bytes()),
+      week_sun: quote(do: F.week_sun(year, month, day) :: 2 - bytes()),
+      iso_week: quote(do: F.iso_week(year, month, day) :: 2 - bytes()),
+      weekday_sun: quote(do: F.wday_sun(year, month, day) :: 1 - bytes()),
+      week_mon: quote(do: F.week_mon(year, month, day) :: 2 - bytes()),
       year2: quote(do: F.zeroed_int2(rem(year, 100)) :: 2 - bytes()),
       year4: quote(do: F.zeroed_int4(year) :: 4 - bytes()),
       offset: quote(do: F.offset(utc_offset, std_offset) :: 5 - bytes()),
       offset_ext: quote(do: F.offset_ext(utc_offset, std_offset) :: 6 - bytes()),
-      # timezone: ?Z,
+      timezone: quote(do: F.timezone(zone_abbr) :: 3 - bytes())
     ]
 
     @complex [
@@ -92,7 +93,7 @@ defmodule Strftime.Format do
       full: [:awday, " ", :amonth, " ", :sday, " ", :iso_time, " ", :timezone, " ", :year4]
     ]
 
-    def names, do: unquote(Keyword.keys(@expressions))
+    def names, do: unquote(Keyword.keys(@expressions) ++ Keyword.keys(@complex))
 
     def expand(string) when is_binary(string), do: [string]
 
@@ -200,6 +201,11 @@ defmodule Strftime.Format do
   def zeroed_int2(int), do: Integer.to_string(int)
 
   @doc false
+  def zeroed_int3(int) when int < 10, do: <<?0, ?0, Integer.to_string(int)::1-bytes>>
+  def zeroed_int3(int) when int < 100, do: <<?0, Integer.to_string(int)::1-bytes>>
+  def zeroed_int3(int), do: Integer.to_string(int)
+
+  @doc false
   def zeroed_int4(int) when int < 10, do: <<?0, ?0, ?0, Integer.to_string(int)::1-bytes>>
   def zeroed_int4(int) when int < 100, do: <<?0, ?0, Integer.to_string(int)::2-bytes>>
   def zeroed_int4(int) when int < 1000, do: <<?0, Integer.to_string(int)::3-bytes>>
@@ -260,6 +266,37 @@ defmodule Strftime.Format do
   end
 
   @doc false
+  def iso_wday(year, month, day) do
+    Integer.to_string(Calendar.ISO.day_of_week(year, month, day))
+  end
+
+  @doc false
+  def wday_sun(year, month, day) do
+    case Calendar.ISO.day_of_week(year, month, day) do
+      7 -> "0"
+      n -> Integer.to_string(n)
+    end
+  end
+
+  @doc false
+  def iso_week(year, month, day) do
+    {_, week} = :calendar.iso_week_number({year, month, day})
+    zeroed_int2(week)
+  end
+
+  @doc false
+  def week_sun(year, month, day) do
+    week_number(year, month, day, &day_of_first_sunday/1)
+    |> zeroed_int2()
+  end
+
+  @doc false
+  def week_mon(year, month, day) do
+    week_number(year, month, day, &day_of_first_monday/1)
+    |> zeroed_int2()
+  end
+
+  @doc false
   def iso_year2(year, month, day) do
     # TODO: port implementation
     {year, _} = :calendar.iso_week_number({year, month, day})
@@ -272,10 +309,41 @@ defmodule Strftime.Format do
     zeroed_int4(year)
   end
 
+  @doc false
+  def year_day(year, month, day) do
+    zeroed_int3(year_day_number(year, month, day))
+  end
+
+  @doc false
+  def timezone(zone_abbr), do: zone_abbr
+
   @compile {:inline, wday: 3, wday_to_abbr: 1, wday_to_full: 1}
 
   defp wday(year, month, day) do
-    Integer.mod(Calendar.ISO.date_to_iso_days(year, month, day) + 5, 7)
+    Integer.mod(:calendar.date_to_gregorian_days(year, month, day) + 5, 7)
+  end
+
+  defp year_day_number(year, month, day) do
+    1 + :calendar.date_to_gregorian_days(year, month, day) -
+      :calendar.date_to_gregorian_days(year, 1, 1)
+  end
+
+  defp week_number(year, month, day, day_of_week_one_fun) do
+    days_from_week_one = year_day_number(year, month, day) - day_of_week_one_fun.(year)
+
+    case days_from_week_one do
+      days when days < 0 -> 0
+      days -> div(days, 7) + 1
+    end
+  end
+
+  defp day_of_first_monday(year) do
+    first_wday = Calendar.ISO.day_of_week(year, 1, 1)
+    Integer.mod(1 - first_wday, 7) + 1
+  end
+
+  defp day_of_first_sunday(year) do
+    7 - Calendar.ISO.day_of_week(year, 1, 1) + 1
   end
 
   for {day, idx} <- Enum.with_index(~w[Mon Tue Wed Thu Fri Sat Sun]) do
