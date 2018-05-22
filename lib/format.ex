@@ -338,12 +338,12 @@ defmodule Strftime.Format do
   end
 
   defp day_of_first_monday(year) do
-    first_wday = :calendar.day_of_the_week(year, 1, 1)
+    first_wday = Calendar.ISO.day_of_week(year, 1, 1)
     Integer.mod(1 - first_wday, 7) + 1
   end
 
   defp day_of_first_sunday(year) do
-    7 - :calendar.day_of_the_week(year, 1, 1) + 1
+    7 - Calendar.ISO.day_of_week(year, 1, 1) + 1
   end
 
   for {day, idx} <- Enum.with_index(~w[Mon Tue Wed Thu Fri Sat Sun]) do
