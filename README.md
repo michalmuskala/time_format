@@ -22,7 +22,11 @@ for that case providing two modes of operation:
     best performance.
 
     ```elixir
-    # Assuming defformat :us_date, "%m-%d-%Y" was called in module MyFormat:
+    defmodule MyFormat do
+      import Strftime
+      defformat :us_date, "%m-%d-%Y"
+    end
+    
     iex> MyFormat.us_date(~D[2017-05-21])
     "05-21-2017"
     ```
