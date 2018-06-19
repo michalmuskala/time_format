@@ -198,31 +198,31 @@ defmodule TimeFormat.Strftime do
   ## Formatting helpers
 
   @doc false
-  def zeroed_int2(int) when int < 10, do: <<?0, Integer.to_string(int)::1-bytes>>
-  def zeroed_int2(int), do: Integer.to_string(int)
+  def zeroed_int2(int) when int >= 10, do: Integer.to_string(int)
+  def zeroed_int2(int), do: <<?0, Integer.to_string(int)::1-bytes>>
 
   @doc false
-  def zeroed_int3(int) when int < 10, do: <<?0, ?0, Integer.to_string(int)::1-bytes>>
-  def zeroed_int3(int) when int < 100, do: <<?0, Integer.to_string(int)::1-bytes>>
-  def zeroed_int3(int), do: Integer.to_string(int)
+  def zeroed_int3(int) when int >= 100, do: Integer.to_string(int)
+  def zeroed_int3(int) when int >= 10, do: <<?0, Integer.to_string(int)::1-bytes>>
+  def zeroed_int3(int), do: <<?0, ?0, Integer.to_string(int)::1-bytes>>
 
   @doc false
-  def zeroed_int4(int) when int < 10, do: <<?0, ?0, ?0, Integer.to_string(int)::1-bytes>>
-  def zeroed_int4(int) when int < 100, do: <<?0, ?0, Integer.to_string(int)::2-bytes>>
-  def zeroed_int4(int) when int < 1000, do: <<?0, Integer.to_string(int)::3-bytes>>
-  def zeroed_int4(int), do: Integer.to_string(int)
+  def zeroed_int4(int) when int >= 1000, do: Integer.to_string(int)
+  def zeroed_int4(int) when int >= 100, do: <<?0, Integer.to_string(int)::3-bytes>>
+  def zeroed_int4(int) when int >= 10, do: <<?0, ?0, Integer.to_string(int)::2-bytes>>
+  def zeroed_int4(int), do: <<?0, ?0, ?0, Integer.to_string(int)::1-bytes>>
 
   @doc false
-  def zeroed_int6(int) when int < 10, do: <<?0, ?0, ?0, ?0, ?0, Integer.to_string(int)::1-bytes>>
-  def zeroed_int6(int) when int < 100, do: <<?0, ?0, ?0, ?0, Integer.to_string(int)::2-bytes>>
-  def zeroed_int6(int) when int < 1000, do: <<?0, ?0, ?0, Integer.to_string(int)::3-bytes>>
-  def zeroed_int6(int) when int < 10000, do: <<?0, ?0, Integer.to_string(int)::4-bytes>>
-  def zeroed_int6(int) when int < 100_000, do: <<?0, Integer.to_string(int)::5-bytes>>
-  def zeroed_int6(int), do: Integer.to_string(int)
+  def zeroed_int6(int) when int >= 100_000, do: Integer.to_string(int)
+  def zeroed_int6(int) when int >= 10000, do: <<?0, Integer.to_string(int)::5-bytes>>
+  def zeroed_int6(int) when int >= 1000, do: <<?0, ?0, Integer.to_string(int)::4-bytes>>
+  def zeroed_int6(int) when int >= 100, do: <<?0, ?0, ?0, Integer.to_string(int)::3-bytes>>
+  def zeroed_int6(int) when int >= 10, do: <<?0, ?0, ?0, ?0, Integer.to_string(int)::2-bytes>>
+  def zeroed_int6(int), do: <<?0, ?0, ?0, ?0, ?0, Integer.to_string(int)::1-bytes>>
 
   @doc false
-  def spaced_int2(int) when int < 10, do: <<?\s, Integer.to_string(int)::1-bytes>>
-  def spaced_int2(int), do: Integer.to_string(int)
+  def spaced_int2(int) when int >= 10, do: Integer.to_string(int)
+  def spaced_int2(int), do: <<?\s, Integer.to_string(int)::1-bytes>>
 
   @doc false
   def offset(utc, std) do
