@@ -17,7 +17,7 @@ defmodule TimeFormat do
   """
   def strftime(format, data) do
     parsed = TimeFormat.Strftime.parse(format)
-    TimeFormat.Strftime.interpret(parsed, data)
+    TimeFormat.Interpreter.interpret(parsed, data)
   end
 
   @common_formats [
