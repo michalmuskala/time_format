@@ -1,9 +1,9 @@
-defmodule Strftime.MixProject do
+defmodule TimeFormat.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :strftime,
+      app: :time_format,
       version: "0.1.0",
       elixir: "~> 1.5",
       start_permanent: Mix.env() == :prod,
@@ -12,9 +12,7 @@ defmodule Strftime.MixProject do
   end
 
   def application do
-    [
-      extra_applications: [:logger]
-    ]
+    []
   end
 
   defp deps do
