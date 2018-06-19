@@ -9,11 +9,11 @@ This library is in development.
 Because most of the time the actual format string is entirely static, the library optimises
 for that case providing two modes of operation:
 
-  * interpretation - using the `TimeFormat.interpret` function, behaving like a classical
-    TimeFormat interface accepting a format string and data to format.
+  * interpretation - using the `TimeFormat.strftime` function, behaving like a classical
+    strftime interface accepting a format string and data to format.
 
     ```elixir
-    iex> TimeFormat.interpret("%m-%d-%Y", ~D[2017-05-21])
+    iex> TimeFormat.strftime("%m-%d-%Y", ~D[2017-05-21])
     "05-21-2017"
     ```
 
