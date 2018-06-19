@@ -1,4 +1,6 @@
 defmodule TimeFormat.Strftime do
+  @moduledoc false
+
   @formats [
     awday: ?a,
     full_wday: ?A,
