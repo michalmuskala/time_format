@@ -91,7 +91,7 @@ defmodule TimeFormat.Interpreter do
           {other, acc}
       end)
       |> elem(1)
-      |> Enum.uniq()
+      |> Enum.uniq_by(fn {name, _} -> name end)
     end
   end
 
